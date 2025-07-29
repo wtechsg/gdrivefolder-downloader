@@ -10,42 +10,47 @@
       margin: 50px auto;
       text-align: center;
     }
+
     input, button {
       width: 100%;
       padding: 10px;
       margin: 10px 0;
       font-size: 16px;
     }
-    .file {
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      border-bottom: 1px solid #eee;
-      padding: 6px 0;
-      font-size: 15px;
-    }
-    .file label {
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-      flex: 1;
-      padding: 5px;
-    }
-    .file input[type="checkbox"] {
-      margin-right: 12px;
-    }
-    .error {
-      color: red;
-    }
+
     .controls {
       display: flex;
       justify-content: space-between;
-      align-items: left;
+      align-items: center;
       margin-top: 10px;
     }
+
     #fileList {
-      margin-top: 50px;
+      margin-top: 20px;
       text-align: left;
+    }
+
+    .file {
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #eee;
+      padding: 6px 0;
+    }
+
+    .file input[type="checkbox"] {
+      flex: 0 0 20px;
+      margin-right: 10px;
+    }
+
+    .file-name {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .error {
+      color: red;
     }
   </style>
 </head>
@@ -57,9 +62,7 @@
   <p id="status" class="error"></p>
 
   <div id="controls" class="controls" style="display:none;">
-    <label>
-      <input type="checkbox" id="selectAll" onchange="toggleSelectAll()"> Select All
-    </label>
+    <label><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"> Select All</label>
     <button onclick="downloadSelected()">Download Selected Files</button>
   </div>
 
@@ -105,10 +108,8 @@
           const div = document.createElement('div');
           div.className = 'file';
           div.innerHTML = `
-            <label>
-              <input type="checkbox" class="fileCheckbox" data-id="${file.id}" data-name="${file.name}">
-              ${file.name}
-            </label>
+            <input type="checkbox" class="fileCheckbox" data-id="${file.id}" data-name="${file.name}">
+            <div class="file-name">${file.name}</div>
           `;
           output.appendChild(div);
         });
