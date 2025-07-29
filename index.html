@@ -19,7 +19,7 @@
   <div id="fileList"></div>
 
   <script>
-    const API_KEY = 'AIzaSyA-MD2LyqhzFQ0QPMjMU6AVDvSRHCLADY8'; // ← Replace this
+    const API_KEY = 'AIzaSyA-MD2LyqhzFQ0QPMjMU6AVDvSRHCLADY8'; // ← Restrict this key in Google Cloud Console
 
     function extractFolderId(url) {
       const match = url.match(/\/folders\/([a-zA-Z0-9_-]+)/);
@@ -51,17 +51,39 @@
         }
 
         output.innerHTML = '<h3>Files in Folder:</h3>';
-        data.files.forEach(file => {
-          const link = `https://drive.google.com/uc?export=download&id=${file.id}`;
+        for (const file of data.files) {
+          const downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${API_KEY}`;
           output.innerHTML += `
             <div class="file">
               📄 <strong>${file.name}</strong><br>
-              <a href="${link}" target="_blank">Download</a>
+              <button onclick="downloadFile('${file.id}', '${file.name}')">Download</button>
             </div>
           `;
-        });
+        }
+
       } catch (err) {
         status.textContent = 'Error accessing folder. Make sure it’s shared publicly.';
+        console.error(err);
+      }
+    }
+
+    async function downloadFile(fileId, fileName) {
+      const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
+
+      try {
+        const response = await fetch(downloadUrl);
+        if (!response.ok) throw new Error('Download failed.');
+        const blob = await response.blob();
+
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = fileName;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch (err) {
+        alert('Failed to download: ' + fileName);
         console.error(err);
       }
     }
