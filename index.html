@@ -1,25 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Google Drive Folder Downloader</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; text-align: center; }
-    input, button { width: 100%; padding: 10px; margin: 10px 5px; font-size: 16px; }
-    .file { margin: 10px 0; text-align: left; }
-    .error { color: red; }
-  </style>
+  <title>Google Drive Downloader</title>
 </head>
 <body>
-  <h2>Google Drive Folder Downloader</h2>
-  <p>Paste a <strong>Public shared Google Drive folder link</strong> below:</p>
-  <input id="folderLink" type="text" placeholder="https://drive.google.com/drive/folders/FOLDER_ID">
+  <h2>Download from Shared Google Drive Folder</h2>
+  <input id="folderLink" type="text" placeholder="Paste shared folder link" style="width: 100%;">
   <button onclick="listFiles()">List Files</button>
-  <p class="error" id="status"></p>
+  <p id="status" style="color:red;"></p>
+  <label><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"> Select All</label>
+  <button onclick="downloadSelected()">Download Selected</button>
   <div id="fileList"></div>
 
   <script>
-    const API_KEY = 'AIzaSyA-MD2LyqhzFQ0QPMjMU6AVDvSRHCLADY8'; // ← Restrict this key in Google Cloud Console
+    const API_KEY = 'AIzaSyA-MD2LyqhzFQ0QPMjMU6AVDvSRHCLADY8';
 
     function extractFolderId(url) {
       const match = url.match(/\/folders\/([a-zA-Z0-9_-]+)/);
@@ -27,63 +22,69 @@
     }
 
     async function listFiles() {
-      const url = document.getElementById('folderLink').value.trim();
+      const folderUrl = document.getElementById('folderLink').value;
+      const folderId = extractFolderId(folderUrl);
       const status = document.getElementById('status');
       const output = document.getElementById('fileList');
       status.textContent = '';
       output.innerHTML = '';
 
-      const folderId = extractFolderId(url);
       if (!folderId) {
-        status.textContent = 'Invalid folder link. Must include /folders/FOLDER_ID';
+        status.textContent = 'Invalid folder link.';
         return;
       }
 
-      const endpoint = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&key=${API_KEY}&fields=files(id,name,mimeType)`;
+      const endpoint = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&key=${API_KEY}&fields=files(id,name)`;
 
       try {
         const res = await fetch(endpoint);
         const data = await res.json();
 
         if (!data.files || data.files.length === 0) {
-          status.textContent = 'No public files found in this folder.';
+          status.textContent = 'No public files found.';
           return;
         }
 
-        output.innerHTML = '<h3>Files in Folder:</h3>';
-        for (const file of data.files) {
-          const downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${API_KEY}`;
-          output.innerHTML += `
-            <div class="file">
-              📄 <strong>${file.name}</strong><br>
-              <button onclick="downloadFile('${file.id}', '${file.name}')">Download</button>
-            </div>
+        data.files.forEach(file => {
+          const div = document.createElement('div');
+          div.innerHTML = `
+            <input type="checkbox" class="fileCheckbox" data-id="${file.id}" data-name="${file.name}">
+            ${file.name}
           `;
-        }
-
+          output.appendChild(div);
+        });
       } catch (err) {
-        status.textContent = 'Error accessing folder. Make sure it’s shared publicly.';
+        status.textContent = 'Error fetching files.';
         console.error(err);
       }
     }
 
+    function toggleSelectAll() {
+      const checked = document.getElementById('selectAll').checked;
+      document.querySelectorAll('.fileCheckbox').forEach(cb => cb.checked = checked);
+    }
+
+    async function downloadSelected() {
+      const checkboxes = document.querySelectorAll('.fileCheckbox:checked');
+      for (const cb of checkboxes) {
+        const id = cb.dataset.id;
+        const name = cb.dataset.name;
+        await downloadFile(id, name);
+      }
+    }
+
     async function downloadFile(fileId, fileName) {
-      const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
-
+      const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
       try {
-        const response = await fetch(downloadUrl);
-        if (!response.ok) throw new Error('Download failed.');
-        const blob = await response.blob();
-
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Fetch failed');
+        const blob = await res.blob();
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = fileName;
-        a.style.display = 'none';
-        document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
       } catch (err) {
-        alert('Failed to download: ' + fileName);
+        alert(`Failed to download ${fileName}`);
         console.error(err);
       }
     }
