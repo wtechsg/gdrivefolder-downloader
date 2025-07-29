@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Google Drive Folder Downloader</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; text-align: center; }
+    input, button { width: 100%; padding: 10px; margin: 10px 5px; font-size: 16px; }
+    .file { margin: 10px 0; text-align: left; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+  <h2>Google Drive Folder Downloader</h2>
+  <p>Paste a <strong>shared Google Drive folder link</strong> below:</p>
+  <input id="folderLink" type="text" placeholder="https://drive.google.com/drive/folders/FOLDER_ID">
+  <button onclick="listFiles()">List Files</button>
+  <p class="error" id="status"></p>
+  <div id="fileList"></div>
+
+  <script>
+    const API_KEY = 'AIzaSyA-MD2LyqhzFQ0QPMjMU6AVDvSRHCLADY8'; // ← Replace this
+
+    function extractFolderId(url) {
+      const match = url.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+      return match ? match[1] : null;
+    }
+
+    async function listFiles() {
+      const url = document.getElementById('folderLink').value.trim();
+      const status = document.getElementById('status');
+      const output = document.getElementById('fileList');
+      status.textContent = '';
+      output.innerHTML = '';
+
+      const folderId = extractFolderId(url);
+      if (!folderId) {
+        status.textContent = 'Invalid folder link. Must include /folders/FOLDER_ID';
+        return;
+      }
+
+      const endpoint = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&key=${API_KEY}&fields=files(id,name,mimeType)`;
+
+      try {
+        const res = await fetch(endpoint);
+        const data = await res.json();
+
+        if (!data.files || data.files.length === 0) {
+          status.textContent = 'No public files found in this folder.';
+          return;
+        }
+
+        output.innerHTML = '<h3>Files in Folder:</h3>';
+        data.files.forEach(file => {
+          const link = `https://drive.google.com/uc?export=download&id=${file.id}`;
+          output.innerHTML += `
+            <div class="file">
+              📄 <strong>${file.name}</strong><br>
+              <a href="${link}" target="_blank">Download</a>
+            </div>
+          `;
+        });
+      } catch (err) {
+        status.textContent = 'Error accessing folder. Make sure it’s shared publicly.';
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+</html>
