@@ -4,32 +4,22 @@
   <meta charset="UTF-8">
   <title>Google Drive Folder Downloader</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; }
-    input, button { padding: 10px; width: 100%; font-size: 16px; margin-top: 10px; }
-    .file { margin: 10px 0; display: flex; align-items: center; }
-    .file label { margin-left: 8px; flex: 1; }
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; text-align: center; }
+    input, button { width: 100%; padding: 10px; margin: 10px 5px; font-size: 16px; }
+    .file { margin: 10px 0; text-align: left; }
     .error { color: red; }
   </style>
-
-  <!-- JSZip and FileSaver -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.0/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
 <body>
   <h2>Google Drive Folder Downloader</h2>
-  <input id="folderLink" type="text" placeholder="Paste Google Drive folder link here">
+  <p>Paste a <strong>shared Google Drive folder link</strong> below:</p>
+  <input id="folderLink" type="text" placeholder="https://drive.google.com/drive/folders/FOLDER_ID">
   <button onclick="listFiles()">List Files</button>
-  <p id="status" class="error"></p>
-
-  <div id="controls" style="display:none; margin-top:20px;">
-    <label><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"> Select All</label>
-    <button onclick="downloadSelected()">Download Selected as ZIP</button>
-  </div>
-
+  <p class="error" id="status"></p>
   <div id="fileList"></div>
 
   <script>
-    const API_KEY = 'AIzaSyA-MD2LyqhzFQ0QPMjMU6AVDvSRHCLADY8'; // ← Replace with your real API key
+    const API_KEY = 'AIzaSyA-MD2LyqhzFQ0QPMjMU6AVDvSRHCLADY8'; // ← Replace this
 
     function extractFolderId(url) {
       const match = url.match(/\/folders\/([a-zA-Z0-9_-]+)/);
@@ -40,14 +30,12 @@
       const url = document.getElementById('folderLink').value.trim();
       const status = document.getElementById('status');
       const output = document.getElementById('fileList');
-      const controls = document.getElementById('controls');
       status.textContent = '';
       output.innerHTML = '';
-      controls.style.display = 'none';
 
       const folderId = extractFolderId(url);
       if (!folderId) {
-        status.textContent = 'Invalid folder link.';
+        status.textContent = 'Invalid folder link. Must include /folders/FOLDER_ID';
         return;
       }
 
@@ -62,61 +50,20 @@
           return;
         }
 
-        controls.style.display = 'block';
-        data.files.forEach((file, index) => {
-          const fileId = file.id;
-          const fileName = file.name;
-          const directLink = `https://drive.google.com/uc?export=download&id=${fileId}`;
-          
-          const div = document.createElement('div');
-          div.className = 'file';
-          div.innerHTML = `
-            <input type="checkbox" class="fileCheckbox" data-link="${directLink}" data-name="${fileName}">
-            <label>${fileName}</label>
-            <a href="${directLink}" target="_blank">Download</a>
+        output.innerHTML = '<h3>Files in Folder:</h3>';
+        data.files.forEach(file => {
+          const link = `https://drive.google.com/uc?export=download&id=${file.id}`;
+          output.innerHTML += `
+            <div class="file">
+              📄 <strong>${file.name}</strong><br>
+              <a href="${link}" target="_blank">Download</a>
+            </div>
           `;
-          output.appendChild(div);
         });
-
       } catch (err) {
-        status.textContent = 'Error fetching folder contents.';
+        status.textContent = 'Error accessing folder. Make sure it’s shared publicly.';
         console.error(err);
       }
-    }
-
-    function toggleSelectAll() {
-      const isChecked = document.getElementById('selectAll').checked;
-      document.querySelectorAll('.fileCheckbox').forEach(cb => cb.checked = isChecked);
-    }
-
-    async function downloadSelected() {
-      const selected = Array.from(document.querySelectorAll('.fileCheckbox:checked'));
-      if (selected.length === 0) {
-        alert("Please select at least one file.");
-        return;
-      }
-
-      const zip = new JSZip();
-
-      document.getElementById('status').textContent = 'Downloading and zipping files... please wait';
-
-      for (const item of selected) {
-        const url = item.dataset.link;
-        const name = item.dataset.name;
-
-        try {
-          const res = await fetch(url);
-          const blob = await res.blob();
-          zip.file(name, blob);
-        } catch (e) {
-          console.error(`Failed to download ${name}`, e);
-        }
-      }
-
-      const zipBlob = await zip.generateAsync({ type: "blob" });
-      saveAs(zipBlob, "google-drive-files.zip");
-
-      document.getElementById('status').textContent = '';
     }
   </script>
 </body>
